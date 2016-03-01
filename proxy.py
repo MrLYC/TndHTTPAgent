@@ -17,9 +17,9 @@ except ImportError:
     from urllib import urlencode
 
 from tornado import (
-    httpserver, web, ioloop,
+    httpserver, web, ioloop, gen,
 )
-from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import HTTPHeaders, parse_response_start_line
 from tornado.options import define, options
 from tornado.escape import native_str
@@ -117,6 +117,24 @@ RequstDataValidator = Validator({
             "type": ["boolean", "string", "null"],
             "default": True,
         },
+        "keystone": {
+            "type": ["object", "null"],
+            "default": None,
+            "properties": {
+                "auth_url": {
+                    "type": "string",
+                },
+                "tenant_name": {
+                    "type": "string",
+                },
+                "user_name": {
+                    "type": "string",
+                },
+                "password": {
+                    "type": "string",
+                },
+            },
+        },
     },
     "definitions": {
         "uri": {
@@ -190,16 +208,12 @@ class ProxyHandler(web.RequestHandler):
         elif not HTTP_Header_EndLine_Rex.match(header_line):
             self.proxy_headers.parse_line(header_line)
 
-    def _request_finished(self, response):
-        if response.error:
-            self.set_status(response.code, str(response.error))
-        else:
-            self.set_status(response.code, response.reason)
-        self.finish()
-
     def _get_request_body(self, request_data):
         post_type = request_data.get("post_type")
         data = request_data.get("data")
+        if data is None:
+            return None
+
         if post_type == "form":
             body = urlencode(data or {})
         elif post_type == "json":
@@ -210,36 +224,99 @@ class ProxyHandler(web.RequestHandler):
             body = None
         return body
 
-    @web.asynchronous
-    def post(self):
-        request_data = self.get_request_data()
-        if not request_data:
-            self.finish()
+    @gen.coroutine
+    def _get_keystone_auth_headers(self, auth_info):
+        try:
+            response = yield self.http_client.fetch(
+                auth_info.get("auth_url"), method="POST",
+                headers={"Content-Type": "application/json"},
+                body=json.dumps({
+                    "auth": {
+                        "passwordCredentials": {
+                            "username": auth_info.get("user_name"),
+                            "password": auth_info.get("password"),
+                        },
+                        "tenantName": auth_info.get("tenant_name"),
+                    }
+                })
+            )
+        except Exception as err:
+            logger.info(err)
+            self.set_status(503, "keystone auth error")
+            raise gen.Return()
 
+        if response.error or response.code != 200:
+            logger.info("keystone auth error")
+            self.set_status(407, "keystone auth error")
+            raise gen.Return()
+
+        auth_info = json.loads(response.body.decode("utf-8"))
+        try:
+            raise gen.Return({
+                "X-AUTH-TOKEN": auth_info['access']['token']['id'],
+            })
+        except KeyError:
+            logger.info("keystone auth failed")
+            self.set_status(407, "keystone auth failed")
+        raise gen.Return()
+
+    def _get_proxy_request_headers(self, request_data):
         headers = {
             k: v for k, v in self.request.headers.items()
             if k.lower() in REQUEST_ACCEPT_HEADERS
         }
-        headers.update(request_data.get("headers") or {})
-        headers["X_Proxy_Agent"] = X_Proxy_Agent
         cookies = request_data.get("cookies")
         if cookies:
             headers["Cookie"] = cookies
+
+        headers.update(request_data.get("headers") or {})
+        headers["X_Proxy_Agent"] = X_Proxy_Agent
+        return headers
+
+    @web.asynchronous
+    @gen.coroutine
+    def post(self):
+        request_data = self.get_request_data()
+        if not request_data:
+            raise gen.Return()
+
         timeout = int(request_data.get("timeout", 0)) or None
         verify_https = bool(request_data.get("verify_https", True))
 
-        self.in_request_headers = False
-        self.http_client.fetch(
-            request_data.get("url"), headers=headers,
-            allow_nonstandard_methods=True,
-            validate_cert=verify_https,
-            body=self._get_request_body(request_data),
-            connect_timeout=timeout, request_timeout=timeout,
+        proxy_request = HTTPRequest(
+            request_data.get("url"), validate_cert=verify_https,
+            headers=self._get_proxy_request_headers(request_data),
             method=request_data.get("method", "GET"),
+            allow_nonstandard_methods=True,
+            connect_timeout=timeout, request_timeout=timeout,
             streaming_callback=self._streaming_callback,
             header_callback=self._header_callback,
-            callback=self._request_finished,
         )
+
+        keystone_auth_info = request_data.get("keystone")
+        if keystone_auth_info:
+            auth_keaders = yield self._get_keystone_auth_headers(
+                keystone_auth_info
+            )
+            if not auth_keaders:
+                raise gen.Return()
+            proxy_request.headers.update(auth_keaders)
+
+        body = self._get_request_body(request_data)
+        if body:
+            proxy_request.body = body
+
+        self.in_request_headers = False
+        try:
+            response = yield self.http_client.fetch(proxy_request)
+        except Exception as err:
+            self.set_status(503, str(err))
+            raise gen.Return()
+
+        if response.error:
+            self.set_status(response.code, str(response.error))
+        else:
+            self.set_status(response.code, response.reason)
 
 
 if __name__ == '__main__':
