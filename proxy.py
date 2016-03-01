@@ -28,34 +28,40 @@ from jsonschema import Draft4Validator as Validator
 from jsonschema.exceptions import ValidationError
 
 logging.config.dictConfig({
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s %(name)s %(levelname)-8s %(message)s',
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "simple": {
+            "format": (
+                r"%(asctime)s %(name)s %(levelname)-8s "
+                r"%(message)s"
+            ),
         },
-        'long': {
-            'format': '%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s %(message)s',
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple'
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': '/data2/log/cloudmonitor/http_proxy.log',
-            'mode': 'a',
-            'formatter': 'long'
+        "long": {
+            "format": (
+                "%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s "
+                r"%(message)s"
+            ),
         },
     },
-    'loggers': {
-        '': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG'
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "simple"
+        },
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": "/data2/log/cloudmonitor/http_proxy.log",
+            "mode": "a",
+            "formatter": "long"
+        },
+    },
+    "loggers": {
+        "": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG"
         }
     }
 })
@@ -139,20 +145,24 @@ RequstDataValidator = Validator({
     "definitions": {
         "uri": {
             "type": "string",
-            "pattern": r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$",
+            "pattern": (
+                r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?"
+                r"(\/|\/([\w#!:.?+=&%@!\-\/]))?$"
+            ),
         },
     },
 })
 REQUEST_ACCEPT_HEADERS = {
-    'user-agent', 'accept', 'accept-encoding',
+    "user-agent", "accept", "accept-encoding",
 }
 RESPONSE_EXCLUDE_HEADERS = {
-    'connection', 'keep-alive', 'proxy-authenticate',
-    'proxy-authorization', 'te', 'trailers', 'transfer-encoding',
-    'upgrade', 'content-encoding', 'content-length', 'set-cookie',
+    "connection", "keep-alive", "proxy-authenticate",
+    "proxy-authorization", "te", "trailers", "transfer-encoding",
+    "upgrade", "content-encoding", "content-length", "set-cookie",
 }
 X_Proxy_Agent = "YYCloudMonitor-HTTP-Proxy"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
+DEFAULT_TIMEOUT = 60
 
 
 def log_exception(func):
@@ -167,6 +177,7 @@ def log_exception(func):
 
 
 class ProxyHandler(web.RequestHandler):
+
     def __init__(self, *args, **kwargs):
         super(ProxyHandler, self).__init__(*args, **kwargs)
         self.proxy_headers = HTTPHeaders()
@@ -199,6 +210,7 @@ class ProxyHandler(web.RequestHandler):
             self._set_proxy_headers()
         self.in_request_headers = False
         self.write(chunk)
+        self.flush()
 
     def _header_callback(self, header_line):
         if not self.in_request_headers:
@@ -253,7 +265,7 @@ class ProxyHandler(web.RequestHandler):
         auth_info = json.loads(response.body.decode("utf-8"))
         try:
             raise gen.Return({
-                "X-AUTH-TOKEN": auth_info['access']['token']['id'],
+                "X-AUTH-TOKEN": auth_info["access"]["token"]["id"],
             })
         except KeyError:
             logger.info("keystone auth failed")
@@ -280,7 +292,7 @@ class ProxyHandler(web.RequestHandler):
         if not request_data:
             raise gen.Return()
 
-        timeout = int(request_data.get("timeout", 0)) or None
+        timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
         verify_https = bool(request_data.get("verify_https", True))
 
         proxy_request = HTTPRequest(
@@ -318,8 +330,7 @@ class ProxyHandler(web.RequestHandler):
         else:
             self.set_status(response.code, response.reason)
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
     define("debug", False, bool, help="debug mode")
     options.parse_command_line()
