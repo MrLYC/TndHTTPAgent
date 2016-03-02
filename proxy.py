@@ -23,6 +23,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import HTTPHeaders, parse_response_start_line
 from tornado.options import define, options
 from tornado.escape import native_str
+from tornado.log import access_log as logger
 
 from jsonschema import Draft4Validator as Validator
 from jsonschema.exceptions import ValidationError
@@ -59,14 +60,13 @@ logging.config.dictConfig({
         },
     },
     "loggers": {
-        "": {
+        "tornado": {
             "handlers": ["console", "file"],
             "level": "DEBUG"
         }
     }
 })
 
-logger = logging.getLogger(__name__)
 RequstDataValidator = Validator({
     "type": "object",
     "required": ["url"],
@@ -183,6 +183,7 @@ class ProxyHandler(web.RequestHandler):
         self.proxy_headers = HTTPHeaders()
         self.http_client = AsyncHTTPClient()
         self.in_request_headers = False
+        self.id = id(self)
 
     def get_request_data(self):
         if self.request.headers.get("X-Proxy-Agent") == X_Proxy_Agent:
@@ -211,6 +212,7 @@ class ProxyHandler(web.RequestHandler):
         self.in_request_headers = False
         self.write(chunk)
         self.flush()
+        logger.debug("[%s] chunk: %s", self.id, chunk)
 
     def _header_callback(self, header_line):
         if not self.in_request_headers:
@@ -237,11 +239,12 @@ class ProxyHandler(web.RequestHandler):
         return body
 
     @gen.coroutine
-    def _get_keystone_auth_headers(self, auth_info):
+    def _get_keystone_auth_headers(self, auth_info, validate_cert=True):
         try:
             response = yield self.http_client.fetch(
                 auth_info.get("auth_url"), method="POST",
                 headers={"Content-Type": "application/json"},
+                validate_cert=validate_cert,
                 body=json.dumps({
                     "auth": {
                         "passwordCredentials": {
@@ -289,14 +292,18 @@ class ProxyHandler(web.RequestHandler):
     @gen.coroutine
     def post(self):
         request_data = self.get_request_data()
+        logger.debug("[%s]proxy request data: %s", self.id, request_data)
         if not request_data:
             raise gen.Return()
 
         timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
         verify_https = bool(request_data.get("verify_https", True))
+        url = request_data.get("url")
+
+        logger.info("[%s]proxy request url: %s", self.id, url)
 
         proxy_request = HTTPRequest(
-            request_data.get("url"), validate_cert=verify_https,
+            url, validate_cert=verify_https,
             headers=self._get_proxy_request_headers(request_data),
             method=request_data.get("method", "GET"),
             allow_nonstandard_methods=True,
@@ -307,8 +314,11 @@ class ProxyHandler(web.RequestHandler):
 
         keystone_auth_info = request_data.get("keystone")
         if keystone_auth_info:
+            logger.warning(
+                "[%s]proxy request required keystone token",
+            )
             auth_headers = yield self._get_keystone_auth_headers(
-                keystone_auth_info
+                keystone_auth_info, validate_cert=verify_https,
             )
             if not auth_headers:
                 raise gen.Return()
@@ -330,6 +340,11 @@ class ProxyHandler(web.RequestHandler):
         else:
             self.set_status(response.code, response.reason)
         self.finish()
+
+        logger.info(
+            "[%s]proxy response status: %s, reason: %s",
+            self.id, response.code, response.reason,
+        )
 
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
