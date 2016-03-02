@@ -307,12 +307,12 @@ class ProxyHandler(web.RequestHandler):
 
         keystone_auth_info = request_data.get("keystone")
         if keystone_auth_info:
-            auth_keaders = yield self._get_keystone_auth_headers(
+            auth_headers = yield self._get_keystone_auth_headers(
                 keystone_auth_info
             )
-            if not auth_keaders:
+            if not auth_headers:
                 raise gen.Return()
-            proxy_request.headers.update(auth_keaders)
+            proxy_request.headers.update(auth_headers)
 
         body = self._get_request_body(request_data)
         if body:
@@ -329,6 +329,7 @@ class ProxyHandler(web.RequestHandler):
             self.set_status(response.code, str(response.error))
         else:
             self.set_status(response.code, response.reason)
+        self.finish()
 
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
