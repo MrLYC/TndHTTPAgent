@@ -160,7 +160,7 @@ RESPONSE_EXCLUDE_HEADERS = {
     "proxy-authorization", "te", "trailers", "transfer-encoding",
     "upgrade", "content-encoding", "content-length", "set-cookie",
 }
-X_Proxy_Agent = "YYCloudMonitor-HTTP-Proxy"
+X_Proxy_Agent = "YYCloudMonitor-HTTP-Agent"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
 DEFAULT_TIMEOUT = 60
 
@@ -292,7 +292,7 @@ class ProxyHandler(web.RequestHandler):
     @gen.coroutine
     def post(self):
         request_data = self.get_request_data()
-        logger.debug("[%s]proxy request data: %s", self.id, request_data)
+        logger.debug("[%s]agent request data: %s", self.id, request_data)
         if not request_data:
             raise gen.Return()
 
@@ -300,7 +300,7 @@ class ProxyHandler(web.RequestHandler):
         verify_https = bool(request_data.get("verify_https", True))
         url = request_data.get("url")
 
-        logger.info("[%s]proxy request url: %s", self.id, url)
+        logger.info("[%s]agent request url: %s", self.id, url)
 
         proxy_request = HTTPRequest(
             url, validate_cert=verify_https,
@@ -315,7 +315,7 @@ class ProxyHandler(web.RequestHandler):
         keystone_auth_info = request_data.get("keystone")
         if keystone_auth_info:
             logger.warning(
-                "[%s]proxy request required keystone token",
+                "[%s]agent request required keystone token",
             )
             auth_headers = yield self._get_keystone_auth_headers(
                 keystone_auth_info, validate_cert=verify_https,
@@ -342,7 +342,7 @@ class ProxyHandler(web.RequestHandler):
         self.finish()
 
         logger.info(
-            "[%s]proxy response status: %s, reason: %s",
+            "[%s]agent response status: %s, reason: %s",
             self.id, response.code, response.reason,
         )
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     options.parse_command_line()
 
     application = web.Application([
-        (r"/proxy/?", ProxyHandler),
+        (r"/request/?", ProxyHandler),
     ], debug=options.debug)
     http_server = httpserver.HTTPServer(application)
     http_server.listen(options.port)
