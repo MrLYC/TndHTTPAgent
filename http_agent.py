@@ -28,44 +28,6 @@ from tornado.log import access_log as logger
 from jsonschema import Draft4Validator as Validator
 from jsonschema.exceptions import ValidationError
 
-logging.config.dictConfig({
-    "version": 1,
-    "disable_existing_loggers": True,
-    "formatters": {
-        "simple": {
-            "format": (
-                r"%(asctime)s %(name)s %(levelname)-8s "
-                r"%(message)s"
-            ),
-        },
-        "long": {
-            "format": (
-                "%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s "
-                r"%(message)s"
-            ),
-        },
-    },
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-            "formatter": "simple"
-        },
-        "file": {
-            "level": "INFO",
-            "class": "logging.FileHandler",
-            "filename": "/data2/log/cloudmonitor/http_proxy.log",
-            "mode": "a",
-            "formatter": "long"
-        },
-    },
-    "loggers": {
-        "tornado": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG"
-        }
-    }
-})
 
 RequstDataValidator = Validator({
     "type": "object",
@@ -348,7 +310,47 @@ class ProxyHandler(web.RequestHandler):
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
     define("debug", False, bool, help="debug mode")
+    define("logpath", "/var/log/http_agent.log", help="log file path")
     options.parse_command_line()
+
+    logging.config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": True,
+        "formatters": {
+            "simple": {
+                "format": (
+                    r"%(asctime)s %(name)s %(levelname)-8s "
+                    r"%(message)s"
+                ),
+            },
+            "long": {
+                "format": (
+                    "%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s "
+                    r"%(message)s"
+                ),
+            },
+        },
+        "handlers": {
+            "console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "simple"
+            },
+            "file": {
+                "level": "INFO",
+                "class": "logging.FileHandler",
+                "filename": options.logpath,
+                "mode": "a",
+                "formatter": "long"
+            },
+        },
+        "loggers": {
+            "tornado": {
+                "handlers": ["console", "file"],
+                "level": "DEBUG"
+            }
+        }
+    })
 
     application = web.Application([
         (r"/request/?", ProxyHandler),
