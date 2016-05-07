@@ -247,7 +247,7 @@ class ProxyHandler(web.RequestHandler):
             headers["Cookie"] = cookies
 
         headers.update(request_data.get("headers") or {})
-        headers["X_Proxy_Agent"] = X_Proxy_Agent
+        headers["X-Proxy-Agent"] = X_Proxy_Agent
         return headers
 
     @web.asynchronous
@@ -310,7 +310,7 @@ class ProxyHandler(web.RequestHandler):
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
     define("debug", False, bool, help="debug mode")
-    define("logpath", "/var/log/http_agent.log", help="log file path")
+    define("logpath", "http_agent.log", help="log file path")
     options.parse_command_line()
 
     logging.config.dictConfig({
