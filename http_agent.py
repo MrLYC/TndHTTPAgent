@@ -122,7 +122,7 @@ RESPONSE_EXCLUDE_HEADERS = {
     "proxy-authorization", "te", "trailers", "transfer-encoding",
     "upgrade", "content-encoding", "content-length", "set-cookie",
 }
-X_Proxy_Agent = "YYCloudMonitor-HTTP-Agent"
+X_Proxy_Agent = "LYC-HTTP-Agent"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
 DEFAULT_TIMEOUT = 60
 
