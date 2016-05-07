@@ -306,8 +306,7 @@ class ProxyHandler(web.RequestHandler):
             url, validate_cert=verify_https,
             headers=self._get_proxy_request_headers(request_data),
             method=request_data.get("method", "GET"),
-            allow_nonstandard_methods=True,
-            connect_timeout=timeout, request_timeout=timeout,
+            allow_nonstandard_methods=True, request_timeout=timeout,
             streaming_callback=self._streaming_callback,
             header_callback=self._header_callback,
         )
