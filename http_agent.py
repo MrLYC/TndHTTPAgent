@@ -244,7 +244,10 @@ class ProxyHandler(web.RequestHandler):
         }
         cookies = request_data.get("cookies")
         if cookies:
-            headers["Cookie"] = cookies
+            headers["Cookie"] = "; ".join(
+                "%s=%s" % i
+                for i in cookies.items()
+            )
 
         headers.update(request_data.get("headers") or {})
         headers["X-Proxy-Agent"] = X_Proxy_Agent
