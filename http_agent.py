@@ -115,12 +115,12 @@ RequstDataValidator = Validator({
     },
 })
 REQUEST_ACCEPT_HEADERS = {
-    "user-agent", "accept", "accept-encoding",
+    "User-Agent", "Accept", "Accept-Encoding",
 }
 RESPONSE_EXCLUDE_HEADERS = {
-    "connection", "keep-alive", "proxy-authenticate",
-    "proxy-authorization", "te", "trailers", "transfer-encoding",
-    "upgrade", "content-encoding", "content-length", "set-cookie",
+    "Connection", "Keep-Alive", "Proxy-Authenticate",
+    "Proxy-Authorization", "Te", "Trailers", "Transfer-Encoding",
+    "Upgrade", "Content-Encoding", "Content-Length", "Set-Cookie",
 }
 X_Proxy_Agent = "LYC-HTTP-Agent"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
@@ -194,7 +194,7 @@ class ProxyHandler(web.RequestHandler):
             body = urlencode(data or {})
         elif post_type == "json":
             body = json.dumps(data)
-        elif post_type == "string":
+        elif post_type == "string" and isinstance(data, basestring):
             body = native_str(data)
         else:
             body = None
@@ -247,6 +247,20 @@ class ProxyHandler(web.RequestHandler):
             headers["Cookie"] = "; ".join(
                 "%s=%s" % i
                 for i in cookies.items()
+            )
+
+        post_type = request_data.get("post_type")
+        if post_type == "form":
+            headers.setdefault(
+                "Content-Type", "application/x-www-form-urlencoded"
+            )
+        elif post_type == "json":
+            headers.setdefault(
+                "Content-Type", "application/json"
+            )
+        elif post_type == "string":
+            headers.setdefault(
+                "Content-Type", "text/plain"
             )
 
         headers.update(request_data.get("headers") or {})
