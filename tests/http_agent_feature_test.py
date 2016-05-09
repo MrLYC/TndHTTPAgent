@@ -135,5 +135,16 @@ class TestDeleteMethod(HttpAgentTestCase):
         args = result["args"]
         self.assertListEqual(data.keys(), args.keys())
 
+
+class TestTimeOut(HttpAgentTestCase):
+    UrlPath = "/delay/3"
+
+    def test_timeout(self):
+        response = self.request({
+            "url": self.url,
+            "timeout": 0.1,
+        })
+        self.assertEqual(response.status_code, 599)
+
 if __name__ == '__main__':
     main()

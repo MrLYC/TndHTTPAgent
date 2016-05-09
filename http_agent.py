@@ -19,7 +19,7 @@ except ImportError:
 from tornado import (
     httpserver, web, ioloop, gen,
 )
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders, parse_response_start_line
 from tornado.options import define, options
 from tornado.escape import native_str
@@ -48,9 +48,10 @@ RequstDataValidator = Validator({
         },
         "timeout": {
             "type": ["number", "string"],
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 300,
             "exclusiveMaximum": False,
+            "exclusiveMinimum": True,
             "default": 30,
         },
         "post_type": {
@@ -300,7 +301,7 @@ class ProxyHandler(web.RequestHandler):
 
     @gen.coroutine
     def _make_proxy_request(self, request_data):
-        timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
+        timeout = float(request_data.get("timeout", DEFAULT_TIMEOUT))
         verify_https = bool(request_data.get("verify_https") or True)
         max_redirects = request_data.get("max_http_redirects") or 0
         follow_redirects = max_redirects > 0  # 0 means do not follow redirects
@@ -317,7 +318,9 @@ class ProxyHandler(web.RequestHandler):
             url, validate_cert=verify_https,
             headers=self._get_proxy_request_headers(request_data),
             method=request_data.get("method", "GET"),
-            allow_nonstandard_methods=True, request_timeout=timeout,
+            allow_nonstandard_methods=True,
+            connect_timeout=timeout,
+            request_timeout=timeout,
             streaming_callback=self._streaming_callback,
             header_callback=self._header_callback,
             follow_redirects=follow_redirects, max_redirects=max_redirects,
@@ -346,6 +349,9 @@ class ProxyHandler(web.RequestHandler):
         self.in_request_headers = False
         try:
             response = yield self.http_client.fetch(proxy_request)
+        except HTTPError as err:
+            self.set_status(err.code, err.message)
+            raise gen.Return()
         except Exception as err:
             self.set_status(503, str(err))
             raise gen.Return()
