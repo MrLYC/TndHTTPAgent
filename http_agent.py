@@ -283,6 +283,14 @@ class ProxyHandler(web.RequestHandler):
         if not request_data:
             raise gen.Return()
 
+        proxy_request = yield self._make_proxy_request(request_data)
+        if not proxy_request:
+            raise gen.Return()
+
+        yield self._fetch_proxy_request(proxy_request)
+
+    @gen.coroutine
+    def _make_proxy_request(self, request_data):
         timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
         verify_https = bool(request_data.get("verify_https") or True)
         url = request_data.get("url")
@@ -317,6 +325,10 @@ class ProxyHandler(web.RequestHandler):
         if body:
             proxy_request.body = body
 
+        raise gen.Return(proxy_request)
+
+    @gen.coroutine
+    def _fetch_proxy_request(self, proxy_request):
         self.in_request_headers = False
         try:
             response = yield self.http_client.fetch(proxy_request)
