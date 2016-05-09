@@ -83,5 +83,22 @@ class TestGetMethod(HttpAgentTestCase):
         self.assertListEqual(data.keys(), args.keys())
         self.assertListEqual(args.values(), [str(i) for i in data.values()])
 
+
+class TestDeleteMethod(HttpAgentTestCase):
+    UrlPath = "/delete"
+
+    def test_delete_query_string(self):
+        data = {
+            "id": 1,
+        }
+        response = self.request({
+            "url": self.url,
+            "method": "DELETE",
+            "data": data,
+        })
+        result = response.json()
+        args = result["args"]
+        self.assertListEqual(data.keys(), args.keys())
+
 if __name__ == '__main__':
     main()
