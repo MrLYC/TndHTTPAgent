@@ -126,9 +126,8 @@ REQUEST_ACCEPT_HEADERS = {
     "User-Agent", "Accept", "Accept-Encoding",
 }
 RESPONSE_EXCLUDE_HEADERS = {
-    "Connection", "Keep-Alive", "Proxy-Authenticate",
-    "Proxy-Authorization", "Te", "Trailers", "Transfer-Encoding",
-    "Upgrade", "Content-Encoding", "Content-Length", "Set-Cookie",
+    "Connection", "Proxy-Authenticate", "Transfer-Encoding",
+    "Content-Encoding", "Content-Length", "Set-Cookie",
 }
 X_Proxy_Agent = "LYC-HTTP-Agent"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")

@@ -20,7 +20,7 @@ class HttpAgentTestCase(TestCase):
         self.request = (lambda x: requests.post(self.agent_url, json=x))
 
 
-class TestHeaders(HttpAgentTestCase):
+class TestRequestHeaders(HttpAgentTestCase):
     UrlPath = "/headers"
 
     def test_headers(self):
@@ -39,6 +39,34 @@ class TestHeaders(HttpAgentTestCase):
         self.assertEqual(headers["X-Proxy-Agent"], "LYC-HTTP-Agent")
         self.assertEqual(headers["User-Agent"], user_agent)
         self.assertEqual(headers["X-Fake-Header"], x_fake_header)
+
+
+class TestResponseHeaders(HttpAgentTestCase):
+    UrlPath = "/response-headers"
+
+    def test_headers(self):
+        x_fake_header = "mrlyc"
+        forbidden_response_headers = {
+            "Connection": "keep-alive",
+        }
+        allowed_response_headers = {
+            "X-Fake-Header": x_fake_header,
+        }
+
+        response_headers = {}
+        response_headers.update(forbidden_response_headers)
+        response_headers.update(allowed_response_headers)
+
+        response = self.request({
+            "url": self.url,
+            "data": response_headers,
+        })
+        result = response.json()
+        self.assertDictContainsSubset(response_headers, result)
+        self.assertDictContainsSubset(
+            allowed_response_headers, response.headers
+        )
+        self.assertNotEqual(response.headers["Connection"], "keep-alive")
 
 
 class TestCookies(HttpAgentTestCase):
