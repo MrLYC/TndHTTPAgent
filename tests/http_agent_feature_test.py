@@ -169,5 +169,16 @@ class TestRedirect(HttpAgentTestCase):
         })
         self.assertEqual(response.status_code, 200)
 
+
+class TestUTF8(HttpAgentTestCase):
+    UrlPath = "/encoding/utf8"
+
+    def test_utf8(self):
+        raw_response = requests.get(self.url)
+        response = self.request({
+            "url": self.url,
+        })
+        self.assertEqual(raw_response.content, response.content)
+
 if __name__ == '__main__':
     main()
