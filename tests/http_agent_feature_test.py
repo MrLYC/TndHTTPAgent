@@ -146,5 +146,28 @@ class TestTimeOut(HttpAgentTestCase):
         })
         self.assertEqual(response.status_code, 599)
 
+
+class TestRedirect(HttpAgentTestCase):
+    UrlPath = "/redirect/2"
+
+    def test_redirect(self):
+        response = self.request({
+            "url": self.url,
+            "max_http_redirects": 0,
+        })
+        self.assertEqual(response.status_code, 404)
+
+        response = self.request({
+            "url": self.url,
+            "max_http_redirects": 1,
+        })
+        self.assertEqual(response.status_code, 302)
+
+        response = self.request({
+            "url": self.url,
+            "max_http_redirects": 2,
+        })
+        self.assertEqual(response.status_code, 200)
+
 if __name__ == '__main__':
     main()
