@@ -10,3 +10,7 @@ deploy:
 
 	cp ./http_agent.nginx.site /usr/local/nginx/conf/sites/
 	service nginx reload
+
+.PHONY: feature-test
+feature-test:
+	./tests/http_agent_feature_test_driver.sh 
