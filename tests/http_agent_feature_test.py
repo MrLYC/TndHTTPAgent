@@ -40,21 +40,26 @@ class TestHeaders(HttpAgentTestCase):
         self.assertEqual(headers["User-Agent"], user_agent)
         self.assertEqual(headers["X-Fake-Header"], x_fake_header)
 
+
+class TestCookies(HttpAgentTestCase):
+    UrlPath = "/cookies"
+
     def test_cookies(self):
-        cookies = {
+        raw_cookies = {
             "integer": 123,
             "string": "456",
             "float": 78.9,
         }
         response = self.request({
             "url": self.url,
-            "cookies": cookies,
+            "cookies": raw_cookies,
         })
         result = response.json()
-        headers = result["headers"]
-        self.assertIn("integer=123", headers["Cookie"])
-        self.assertIn("string=456", headers["Cookie"])
-        self.assertIn("float=78.9", headers["Cookie"])
+        cookies = result["cookies"]
+        self.assertDictEqual(cookies, {
+            k: str(v)
+            for k, v in raw_cookies.items()
+        })
 
 
 class TestGetMethod(HttpAgentTestCase):
