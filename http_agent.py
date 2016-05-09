@@ -58,6 +58,14 @@ RequstDataValidator = Validator({
             "enum": ["form", "json", "string"],
             "default": "string",
         },
+        "max_http_redirects": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 3,
+            "exclusiveMinimum": False,
+            "exclusiveMaximum": False,
+            "default": 0,
+        },
         "proxies": {
             "type": ["object", "null"],
             "minProperties": 1,
@@ -276,8 +284,10 @@ class ProxyHandler(web.RequestHandler):
             raise gen.Return()
 
         timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
-        verify_https = bool(request_data.get("verify_https", True))
+        verify_https = bool(request_data.get("verify_https") or True)
         url = request_data.get("url")
+        max_redirects = request_data.get("max_http_redirects") or 0
+        follow_redirects = max_redirects > 0  # 0 means do not follow redirects
 
         logger.info("[%s]agent request url: %s", self.id, url)
 
@@ -288,6 +298,7 @@ class ProxyHandler(web.RequestHandler):
             allow_nonstandard_methods=True, request_timeout=timeout,
             streaming_callback=self._streaming_callback,
             header_callback=self._header_callback,
+            follow_redirects=follow_redirects, max_redirects=max_redirects,
         )
 
         keystone_auth_info = request_data.get("keystone")
