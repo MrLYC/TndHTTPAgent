@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 import os
-from urlparse import urljoin
+import urlparse
+import urllib
 from unittest import TestCase, main
 
 import requests
@@ -13,7 +14,7 @@ class HttpAgentTestCase(TestCase):
 
     def setUp(self):
         self.base_url = "http://httpbin.org"
-        self.url = urljoin(self.base_url, self.UrlPath)
+        self.url = urlparse.urljoin(self.base_url, self.UrlPath)
         self.agent_port = int(os.environ["HttpAgentServerPort"])
         self.agent_url = "http://localhost:%s/request/" % self.agent_port
         self.request = (lambda x: requests.post(self.agent_url, json=x))
@@ -55,6 +56,32 @@ class TestHeaders(HttpAgentTestCase):
         self.assertIn("string=456", headers["Cookie"])
         self.assertIn("float=78.9", headers["Cookie"])
 
+
+class TestGetMethod(HttpAgentTestCase):
+    UrlPath = "/get"
+
+    def test_get_query_string(self):
+        data = {
+            "index": 0,
+            "limit": 20,
+            "preview": "",
+        }
+        query_string = urllib.urlencode(data)
+
+        response = self.request({
+            "url": self.url,
+            "method": "GET",
+            "data": data,
+        })
+        result = response.json()
+        url, qs = result["url"].split("?")
+
+        self.assertEqual(url, self.url)
+        self.assertSetEqual(set(query_string.split("&")), set(qs.split("&")))
+
+        args = result["args"]
+        self.assertListEqual(data.keys(), args.keys())
+        self.assertListEqual(args.values(), [str(i) for i in data.values()])
 
 if __name__ == '__main__':
     main()

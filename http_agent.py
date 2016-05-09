@@ -293,9 +293,14 @@ class ProxyHandler(web.RequestHandler):
     def _make_proxy_request(self, request_data):
         timeout = int(request_data.get("timeout", DEFAULT_TIMEOUT))
         verify_https = bool(request_data.get("verify_https") or True)
-        url = request_data.get("url")
         max_redirects = request_data.get("max_http_redirects") or 0
         follow_redirects = max_redirects > 0  # 0 means do not follow redirects
+
+        url = request_data.get("url")
+        params = request_data.get("data")
+        post_type = request_data.get("post_type")
+        if params and post_type is None:
+            url = "%s?%s" % (url, urlencode(params))
 
         logger.info("[%s]agent request url: %s", self.id, url)
 
