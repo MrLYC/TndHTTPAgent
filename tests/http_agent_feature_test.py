@@ -119,6 +119,52 @@ class TestGetMethod(HttpAgentTestCase):
         self.assertListEqual(args.values(), [str(i) for i in data.values()])
 
 
+class TestPostMethod(HttpAgentTestCase):
+    UrlPath = "/post"
+
+    def test_post_form(self):
+        data = {
+            "key": "test",
+            "value": "123",
+        }
+        response = self.request({
+            "url": self.url,
+            "method": "POST",
+            "data": data,
+            "post_type": "form",
+        })
+        result = response.json()
+        form = result["form"]
+        self.assertDictEqual(form, data)
+
+    def test_post_json(self):
+        data = {
+            "key": "test",
+            "value": 123,
+        }
+        response = self.request({
+            "url": self.url,
+            "method": "POST",
+            "data": data,
+            "post_type": "json",
+        })
+        result = response.json()
+        json = result["json"]
+        self.assertDictEqual(json, data)
+
+    def test_post_string(self):
+        data = "test"
+        response = self.request({
+            "url": self.url,
+            "method": "POST",
+            "data": data,
+            "post_type": "string",
+        })
+        result = response.json()
+        body = result["data"]
+        self.assertEqual(body, data)
+
+
 class TestDeleteMethod(HttpAgentTestCase):
     UrlPath = "/delete"
 
