@@ -31,6 +31,7 @@ class TestRequestHeaders(HttpAgentTestCase):
             "headers": {
                 "User-Agent": user_agent,
                 "X-Fake-Header": x_fake_header,
+                "Content-Length": "0",
             }
         })
 
@@ -39,6 +40,7 @@ class TestRequestHeaders(HttpAgentTestCase):
         self.assertEqual(headers["X-Proxy-Agent"], "LYC-HTTP-Agent")
         self.assertEqual(headers["User-Agent"], user_agent)
         self.assertEqual(headers["X-Fake-Header"], x_fake_header)
+        self.assertNotEqual(headers.get("Content-Length"), "0")
 
 
 class TestResponseHeaders(HttpAgentTestCase):

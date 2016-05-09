@@ -122,9 +122,14 @@ RequstDataValidator = Validator({
         },
     },
 })
-REQUEST_ACCEPT_HEADERS = {
+RAW_REQUEST_ACCEPT_HEADERS = {
     "User-Agent", "Accept", "Accept-Encoding",
 }
+REQUEST_ACCEPT_HEADERS = {
+    "Content-Type", "Date", "Expect", "Forwarded", "Host",
+    "If-Match", "If-Modified-Since", "If-None-Match", "From",
+    "If-Range", "If-Unmodified-Since", "Origin", "Range",
+} | RAW_REQUEST_ACCEPT_HEADERS
 RESPONSE_EXCLUDE_HEADERS = {
     "Connection", "Proxy-Authenticate", "Transfer-Encoding",
     "Content-Encoding", "Content-Length", "Set-Cookie",
@@ -247,7 +252,7 @@ class ProxyHandler(web.RequestHandler):
     def _get_proxy_request_headers(self, request_data):
         headers = {
             k: v for k, v in self.request.headers.items()
-            if k.lower() in REQUEST_ACCEPT_HEADERS
+            if k.lower() in RAW_REQUEST_ACCEPT_HEADERS
         }
         cookies = request_data.get("cookies")
         if cookies:
@@ -270,7 +275,12 @@ class ProxyHandler(web.RequestHandler):
                 "Content-Type", "text/plain"
             )
 
-        headers.update(request_data.get("headers") or {})
+        request_headers = request_data.get("headers") or {}
+        for k, v in request_headers.items():
+            if k in REQUEST_ACCEPT_HEADERS:
+                headers[k] = v
+            elif k.startswith("X-"):
+                headers[k] = v
         headers["X-Proxy-Agent"] = X_Proxy_Agent
         return headers
 
