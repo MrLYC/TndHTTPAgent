@@ -45,7 +45,7 @@ RESPONSE_EXCLUDE_HEADERS = {
 }
 X_Proxy_Agent = "LYC-HTTP-Agent"
 HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
-RequstDataValidator = Validator({
+RequstDataValidateSchema = {
     "type": "object",
     "required": ["url"],
     "properties": {
@@ -143,7 +143,7 @@ RequstDataValidator = Validator({
             ),
         },
     },
-})
+}
 
 
 def log_exception(func):
@@ -173,7 +173,8 @@ class ProxyHandler(web.RequestHandler):
 
         try:
             request_data = json.loads(self.request.body.decode("utf-8"))
-            RequstDataValidator.validate(request_data)
+            validator = Validator(RequstDataValidateSchema)
+            validator.validate(request_data)
         except ValueError as err:
             self.set_status(400, str(err))
             return
