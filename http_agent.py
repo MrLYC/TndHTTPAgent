@@ -29,6 +29,22 @@ from jsonschema import Draft4Validator as Validator
 from jsonschema.exceptions import ValidationError
 
 
+DEFAULT_TIMEOUT = 10
+RAW_REQUEST_ACCEPT_HEADERS = {
+    "User-Agent", "Accept", "Accept-Encoding", "Referer",
+}
+REQUEST_ACCEPT_HEADERS = {
+    "Accept-Charset", "Accept-Language", "Accept-Datetime",
+    "Content-Type", "Date", "Expect", "Forwarded", "Host",
+    "If-Match", "If-Modified-Since", "If-None-Match", "From",
+    "If-Range", "If-Unmodified-Since", "Origin", "Range",
+} | RAW_REQUEST_ACCEPT_HEADERS
+RESPONSE_EXCLUDE_HEADERS = {
+    "Connection", "Proxy-Authenticate", "Transfer-Encoding",
+    "Content-Encoding", "Content-Length",
+}
+X_Proxy_Agent = "LYC-HTTP-Agent"
+HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
 RequstDataValidator = Validator({
     "type": "object",
     "required": ["url"],
@@ -49,10 +65,10 @@ RequstDataValidator = Validator({
         "timeout": {
             "type": ["number", "string"],
             "minimum": 0,
-            "maximum": 300,
+            "maximum": 120,
             "exclusiveMaximum": False,
             "exclusiveMinimum": True,
-            "default": 30,
+            "default": DEFAULT_TIMEOUT,
         },
         "post_type": {
             "type": ["string", "null"],
@@ -80,8 +96,13 @@ RequstDataValidator = Validator({
         "headers": {
             "type": ["object", "null"],
             "minProperties": 1,
+            "additionalProperties": False,
             "patternProperties": {
-                r"^[\w-]+$": {
+                # header field starts with X- or in REQUEST_ACCEPT_HEADERS
+                r"(?:X\-[\w\-]+)|%s" % "|".join(
+                    "(?:%s)" % i.replace("-", r"\-")
+                    for i in REQUEST_ACCEPT_HEADERS
+                ): {
                     "type": "string",
                 },
             },
@@ -123,21 +144,6 @@ RequstDataValidator = Validator({
         },
     },
 })
-RAW_REQUEST_ACCEPT_HEADERS = {
-    "User-Agent", "Accept", "Accept-Encoding",
-}
-REQUEST_ACCEPT_HEADERS = {
-    "Content-Type", "Date", "Expect", "Forwarded", "Host",
-    "If-Match", "If-Modified-Since", "If-None-Match", "From",
-    "If-Range", "If-Unmodified-Since", "Origin", "Range",
-} | RAW_REQUEST_ACCEPT_HEADERS
-RESPONSE_EXCLUDE_HEADERS = {
-    "Connection", "Proxy-Authenticate", "Transfer-Encoding",
-    "Content-Encoding", "Content-Length", "Set-Cookie",
-}
-X_Proxy_Agent = "LYC-HTTP-Agent"
-HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
-DEFAULT_TIMEOUT = 60
 
 
 def log_exception(func):
@@ -172,7 +178,7 @@ class ProxyHandler(web.RequestHandler):
             self.set_status(400, str(err))
             return
         except ValidationError as err:
-            self.set_status(400, "/%s: %s" % ("/".join(err.path), err.message))
+            self.set_status(400, "/%s: %s" % ("::".join(err.path), err.message))
             return
         return request_data
 

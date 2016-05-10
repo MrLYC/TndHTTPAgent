@@ -24,14 +24,22 @@ class TestRequestHeaders(HttpAgentTestCase):
     UrlPath = "/headers"
 
     def test_headers(self):
+        response = self.request({
+            "url": self.url,
+            "headers": {
+                "Content-Length": "0",
+            }
+        })
+        self.assertEqual(response.status_code, 400)
+
         user_agent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36"
         x_fake_header = "mrlyc"
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "headers": {
                 "User-Agent": user_agent,
                 "X-Fake-Header": x_fake_header,
-                "Content-Length": "0",
             }
         })
 
@@ -61,6 +69,7 @@ class TestResponseHeaders(HttpAgentTestCase):
 
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "data": response_headers,
         })
         result = response.json()
@@ -82,6 +91,7 @@ class TestCookies(HttpAgentTestCase):
         }
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "cookies": raw_cookies,
         })
         result = response.json()
@@ -105,6 +115,7 @@ class TestGetMethod(HttpAgentTestCase):
 
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "method": "GET",
             "data": data,
         })
@@ -129,6 +140,7 @@ class TestPostMethod(HttpAgentTestCase):
         }
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "method": "POST",
             "data": data,
             "post_type": "form",
@@ -144,6 +156,7 @@ class TestPostMethod(HttpAgentTestCase):
         }
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "method": "POST",
             "data": data,
             "post_type": "json",
@@ -156,6 +169,7 @@ class TestPostMethod(HttpAgentTestCase):
         data = "test"
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "method": "POST",
             "data": data,
             "post_type": "string",
@@ -174,6 +188,7 @@ class TestDeleteMethod(HttpAgentTestCase):
         }
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "method": "DELETE",
             "data": data,
         })
@@ -199,18 +214,21 @@ class TestRedirect(HttpAgentTestCase):
     def test_redirect(self):
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "max_http_redirects": 0,
         })
         self.assertEqual(response.status_code, 404)
 
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "max_http_redirects": 1,
         })
         self.assertEqual(response.status_code, 302)
 
         response = self.request({
             "url": self.url,
+            "timeout": 60,
             "max_http_redirects": 2,
         })
         self.assertEqual(response.status_code, 200)
@@ -223,6 +241,7 @@ class TestUTF8(HttpAgentTestCase):
         raw_response = requests.get(self.url)
         response = self.request({
             "url": self.url,
+            "timeout": 60,
         })
         self.assertEqual(raw_response.content, response.content)
 
