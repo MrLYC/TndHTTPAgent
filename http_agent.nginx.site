@@ -3,13 +3,15 @@ upstream http_agent {
     server 127.0.0.1:7502;
     server 127.0.0.1:7503;
     server 127.0.0.1:7504;
+
+    keepalive 16;
 }
 
 server {
-    listen 8888;
+    listen 80;
     server_name www.example.com;
 
-    location /request/ {
+    location / {
         proxy_pass http://http_agent;
 
         proxy_pass_header Server;
