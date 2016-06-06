@@ -5,6 +5,7 @@ import re
 import logging
 import logging.config
 import functools
+import cPickle
 
 try:
     import simplejson as json
@@ -144,6 +145,7 @@ RequstDataValidateSchema = {
         },
     },
 }
+RequstDataValidator = Validator(RequstDataValidateSchema)
 
 
 def log_exception(func):
@@ -173,8 +175,7 @@ class ProxyHandler(web.RequestHandler):
 
         try:
             request_data = json.loads(self.request.body.decode("utf-8"))
-            validator = Validator(RequstDataValidateSchema)
-            validator.validate(request_data)
+            RequstDataValidator.validate(request_data)
         except ValueError as err:
             self.set_status(400, str(err))
             return
