@@ -377,6 +377,7 @@ class ProxyHandler(web.RequestHandler):
 
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
+    define("quiet", False, help="nothing to output")
     define("debug", False, bool, help="debug mode")
     define("logpath", "http_agent.log", help="log file path")
     options.parse_command_line()
@@ -385,12 +386,6 @@ if __name__ == "__main__":
         "version": 1,
         "disable_existing_loggers": True,
         "formatters": {
-            "simple": {
-                "format": (
-                    r"%(asctime)s %(name)s %(levelname)-8s "
-                    r"%(message)s"
-                ),
-            },
             "long": {
                 "format": (
                     "%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s "
@@ -399,11 +394,6 @@ if __name__ == "__main__":
             },
         },
         "handlers": {
-            "console": {
-                "level": "DEBUG",
-                "class": "logging.StreamHandler",
-                "formatter": "simple"
-            },
             "file": {
                 "level": "INFO",
                 "class": "logging.FileHandler",
@@ -414,7 +404,7 @@ if __name__ == "__main__":
         },
         "loggers": {
             "tornado": {
-                "handlers": ["console", "file"],
+                "handlers": ["file"],
                 "level": "DEBUG"
             }
         }
