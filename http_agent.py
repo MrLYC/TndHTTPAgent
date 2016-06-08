@@ -377,7 +377,7 @@ class ProxyHandler(web.RequestHandler):
 
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
-    define("quiet", False, help="nothing to output")
+    define("curl_httpclient", False, help="use curl httpclient")
     define("debug", False, bool, help="debug mode")
     define("logpath", "http_agent.log", help="log file path")
     options.parse_command_line()
@@ -413,6 +413,12 @@ if __name__ == "__main__":
     application = web.Application([
         (r"/request/?", ProxyHandler),
     ], debug=options.debug)
+
+    if options.curl_httpclient:
+        AsyncHTTPClient.configure(
+            "tornado.curl_httpclient.CurlAsyncHTTPClient"
+        )
+
     http_server = httpserver.HTTPServer(application)
     http_server.listen(options.port)
     instance = ioloop.IOLoop.instance()
