@@ -45,7 +45,7 @@ RESPONSE_EXCLUDE_HEADERS = {
     "Content-Encoding", "Content-Length",
 }
 X_Proxy_Agent = "LYC-HTTP-Agent"
-HTTP_Header_EndLine_Rex = re.compile("\r?\n\r?\n")
+HTTPHeaderEndLineRex = re.compile("\r?\n\r?\n")
 RequstDataValidateSchema = {
     "type": "object",
     "required": ["url"],
@@ -68,7 +68,7 @@ RequstDataValidateSchema = {
             "minimum": 0,
             "maximum": 120,
             "exclusiveMaximum": False,
-            "exclusiveMinimum": True,
+            "exclusiveMinimum": False,
             "default": DEFAULT_TIMEOUT,
         },
         "post_type": {
@@ -194,7 +194,6 @@ class ProxyHandler(web.RequestHandler):
             self._set_proxy_headers()
         self.in_request_headers = False
         self.write(chunk)
-        self.flush()
         logger.debug("[%s] chunk: %s", self.id, chunk)
 
     def _header_callback(self, header_line):
@@ -202,7 +201,7 @@ class ProxyHandler(web.RequestHandler):
             start_line = parse_response_start_line(header_line)
             self.set_status(start_line.code, start_line.reason)
             self.in_request_headers = True
-        elif not HTTP_Header_EndLine_Rex.match(header_line):
+        elif not HTTPHeaderEndLineRex.match(header_line):
             self.proxy_headers.parse_line(header_line)
 
     def _get_request_body(self, request_data):
