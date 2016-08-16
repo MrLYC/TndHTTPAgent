@@ -133,6 +133,9 @@ RequstDataValidateSchema = {
                 },
             },
         },
+        "role": {
+            "type": ["string", "null"],
+        },
     },
     "definitions": {
         "uri": {
@@ -145,6 +148,39 @@ RequstDataValidateSchema = {
     },
 }
 RequstDataValidator = Validator(RequstDataValidateSchema)
+
+
+class RequestParamsError(Exception):
+    pass
+
+
+class InterfaceRoleNotFoundError(RequestParamsError):
+    pass
+
+
+class InterfaceRoleManager(object):
+    InterfaceRoles = None
+
+    @classmethod
+    def setup_roles(cls, roles):
+        cls.InterfaceRoles = roles
+
+    @classmethod
+    def set_curl_interface_role(cls, request, role):
+        if cls.InterfaceRoles is None:
+            return
+
+        import pycurl
+
+        interface = cls.InterfaceRoles.get(role)
+        if not interface:
+            raise InterfaceRoleNotFoundError("role %s not found" % role)
+
+        def prepare_curl_callback(curl):
+            print interface
+            curl.setopt(pycurl.INTERFACE, interface)
+
+        request.prepare_curl_callback = prepare_curl_callback
 
 
 def log_exception(func):
@@ -160,8 +196,7 @@ def log_exception(func):
 
 class ProxyHandler(web.RequestHandler):
 
-    def __init__(self, *args, **kwargs):
-        super(ProxyHandler, self).__init__(*args, **kwargs)
+    def initialize(self):
         self.proxy_headers = HTTPHeaders()
         # create a new client for each request
         self.http_client = AsyncHTTPClient(max_clients=1)
@@ -300,11 +335,15 @@ class ProxyHandler(web.RequestHandler):
         if not request_data:
             raise gen.Return()
 
-        proxy_request = yield self._make_proxy_request(request_data)
-        if not proxy_request:
-            raise gen.Return()
+        try:
+            proxy_request = yield self._make_proxy_request(request_data)
+            if not proxy_request:
+                raise gen.Return()
 
-        yield self._fetch_proxy_request(proxy_request)
+            yield self._fetch_proxy_request(proxy_request)
+        except RequestParamsError as err:
+            self.set_status(400, str(err))
+        raise gen.Return()
 
     @gen.coroutine
     def _make_proxy_request(self, request_data):
@@ -332,6 +371,12 @@ class ProxyHandler(web.RequestHandler):
             header_callback=self._header_callback,
             follow_redirects=follow_redirects, max_redirects=max_redirects,
         )
+
+        role_name = request_data.get("role")
+        if role_name:
+            InterfaceRoleManager.set_curl_interface_role(
+                proxy_request, role_name,
+            )
 
         keystone_auth_info = request_data.get("keystone")
         if keystone_auth_info:
@@ -377,6 +422,7 @@ class ProxyHandler(web.RequestHandler):
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
     define("curl_httpclient", False, help="use curl httpclient")
+    define("interface_roles", "", help="roles to chosen interface")
     define("debug", False, bool, help="debug mode")
     define("logpath", "http_agent.log", help="log file path")
     options.parse_command_line()
@@ -408,6 +454,12 @@ if __name__ == "__main__":
             }
         }
     })
+
+    if options.interface_roles:
+        InterfaceRoleManager.setup_roles(dict(
+            i.split(":", 1)
+            for i in options.interface_roles.split(",")
+        ))
 
     application = web.Application([
         (r"/request/?", ProxyHandler),
