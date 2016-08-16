@@ -221,15 +221,19 @@ class ProxyHandler(web.RequestHandler):
 
     def _set_proxy_headers(self):
         for k, v in self.proxy_headers.items():
-            if k.lower() not in RESPONSE_EXCLUDE_HEADERS:
+            if k not in RESPONSE_EXCLUDE_HEADERS:
+                logger.debug(
+                    "[%s] write header %s: %s", self.id, k, v,
+                )
                 self.set_header(k, v)
 
     def _streaming_callback(self, chunk):
         if not self._headers_written:
             self._set_proxy_headers()
+            self.flush()
         self.in_request_headers = False
         self.write(chunk)
-        logger.debug("[%s] chunk: %s", self.id, chunk)
+        logger.debug("[%s] chunk length %s", self.id, len(chunk))
 
     def _header_callback(self, header_line):
         if not self.in_request_headers:
@@ -343,6 +347,8 @@ class ProxyHandler(web.RequestHandler):
             yield self._fetch_proxy_request(proxy_request)
         except RequestParamsError as err:
             self.set_status(400, str(err))
+        except Exception as err:
+            logger.exception(err)
         raise gen.Return()
 
     @gen.coroutine
