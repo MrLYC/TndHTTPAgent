@@ -177,7 +177,6 @@ class InterfaceRoleManager(object):
             raise InterfaceRoleNotFoundError("role %s not found" % role)
 
         def prepare_curl_callback(curl):
-            print interface
             curl.setopt(pycurl.INTERFACE, interface)
 
         request.prepare_curl_callback = prepare_curl_callback
