@@ -5,7 +5,6 @@ import re
 import logging
 import logging.config
 import functools
-import cPickle
 
 try:
     import simplejson as json
@@ -164,7 +163,8 @@ class ProxyHandler(web.RequestHandler):
     def __init__(self, *args, **kwargs):
         super(ProxyHandler, self).__init__(*args, **kwargs)
         self.proxy_headers = HTTPHeaders()
-        self.http_client = AsyncHTTPClient()
+        # create a new client for each request
+        self.http_client = AsyncHTTPClient(max_clients=1)
         self.in_request_headers = False
         self.id = id(self)
 
