@@ -170,16 +170,10 @@ class InterfaceRoleManager(object):
         if cls.InterfaceRoles is None:
             return
 
-        import pycurl
-
         interface = cls.InterfaceRoles.get(role)
         if not interface:
             raise InterfaceRoleNotFoundError("role %s not found" % role)
-
-        def prepare_curl_callback(curl):
-            curl.setopt(pycurl.INTERFACE, interface)
-
-        request.prepare_curl_callback = prepare_curl_callback
+        request.network_interface = interface
 
 
 def log_exception(func):
