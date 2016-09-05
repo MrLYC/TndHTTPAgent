@@ -227,6 +227,9 @@ class ProxyHandler(web.RequestHandler):
                 self.set_header(k, v)
 
     def _streaming_callback(self, chunk):
+        if self._finished:
+            return
+
         if not self._headers_written:
             self._set_proxy_headers()
             self.flush()
@@ -353,9 +356,11 @@ class ProxyHandler(web.RequestHandler):
     def prepare_curl_callback(self, curl):
         import pycurl
 
-        if "insecure_connection" in self.request_data:
-            insecure = bool(self.request_data.get("insecure_connection"))
-            curl.setopt(pycurl.SSL_VERIFYHOST, insecure)
+        if (
+            "insecure_connection" in self.request_data
+            and bool(self.request_data.get("insecure_connection"))
+        ):
+            curl.setopt(pycurl.SSL_VERIFYHOST, 0)
 
     @gen.coroutine
     def _make_proxy_request(self, request_data):
@@ -426,7 +431,6 @@ class ProxyHandler(web.RequestHandler):
             self.set_status(response.code, str(response.error))
         else:
             self.set_status(response.code, response.reason)
-        self.finish()
 
         logger.info(
             "[%s]agent response status: %s, reason: %s",
