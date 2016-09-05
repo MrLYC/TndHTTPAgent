@@ -111,9 +111,13 @@ RequstDataValidateSchema = {
             "type": ["object", "string", "null"],
             "default": "",
         },
-        "verify_https": {
+        "validate_cert": {
             "type": ["boolean", "string", "null"],
             "default": True,
+        },
+        "insecure_connection": {
+            "type": ["boolean", "string", "null"],
+            "default": False,
         },
         "keystone": {
             "type": ["object", "null"],
@@ -195,6 +199,7 @@ class ProxyHandler(web.RequestHandler):
         self.http_client = AsyncHTTPClient(max_clients=1)
         self.in_request_headers = False
         self.id = id(self)
+        self.request_data = None
 
     def get_request_data(self):
         if self.request.headers.get("X-Proxy-Agent") == X_Proxy_Agent:
@@ -210,6 +215,7 @@ class ProxyHandler(web.RequestHandler):
         except ValidationError as err:
             self.set_status(400, "/%s: %s" % ("::".join(err.path), err.message))
             return
+        self.request_data = request_data
         return request_data
 
     def _set_proxy_headers(self):
@@ -344,10 +350,17 @@ class ProxyHandler(web.RequestHandler):
             logger.exception(err)
         raise gen.Return()
 
+    def prepare_curl_callback(self, curl):
+        import pycurl
+
+        if "insecure_connection" in self.request_data:
+            insecure = bool(self.request_data.get("insecure_connection"))
+            curl.setopt(pycurl.SSL_VERIFYHOST, insecure)
+
     @gen.coroutine
     def _make_proxy_request(self, request_data):
         timeout = float(request_data.get("timeout", DEFAULT_TIMEOUT))
-        verify_https = bool(request_data.get("verify_https") or True)
+        validate_cert = bool(request_data.get("validate_cert") or True)
         max_redirects = request_data.get("max_http_redirects") or 0
         follow_redirects = max_redirects > 0  # 0 means do not follow redirects
 
@@ -360,7 +373,7 @@ class ProxyHandler(web.RequestHandler):
         logger.info("[%s]agent request url: %s", self.id, url)
 
         proxy_request = HTTPRequest(
-            url, validate_cert=verify_https,
+            url, validate_cert=validate_cert,
             headers=self._get_proxy_request_headers(request_data),
             method=request_data.get("method", "GET"),
             allow_nonstandard_methods=True,
@@ -368,7 +381,9 @@ class ProxyHandler(web.RequestHandler):
             request_timeout=timeout,
             streaming_callback=self._streaming_callback,
             header_callback=self._header_callback,
-            follow_redirects=follow_redirects, max_redirects=max_redirects,
+            follow_redirects=follow_redirects,
+            max_redirects=max_redirects,
+            prepare_curl_callback=self.prepare_curl_callback,
         )
 
         role_name = request_data.get("role")
@@ -383,7 +398,7 @@ class ProxyHandler(web.RequestHandler):
                 "[%s]agent request required keystone token",
             )
             auth_headers = yield self._get_keystone_auth_headers(
-                keystone_auth_info, validate_cert=verify_https,
+                keystone_auth_info, validate_cert=validate_cert,
             )
             if not auth_headers:
                 raise gen.Return()
