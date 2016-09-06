@@ -213,7 +213,9 @@ class ProxyHandler(web.RequestHandler):
             self.set_status(400, str(err))
             return
         except ValidationError as err:
-            self.set_status(400, "/%s: %s" % ("::".join(err.path), err.message))
+            self.set_status(400, "/%s: %s" % (
+                "::".join(err.path), err.message
+            ))
             return
         self.request_data = request_data
         return request_data
@@ -439,6 +441,7 @@ class ProxyHandler(web.RequestHandler):
 
 
 class IndexHandler(web.RequestHandler):
+
     def get(self):
         self.write("ok")
         self.finish()
@@ -457,8 +460,8 @@ if __name__ == "__main__":
         "formatters": {
             "long": {
                 "format": (
-                    "%(asctime)s %(name)s %(module)s %(process)d %(levelname)-8s "
-                    r"%(message)s"
+                    r"%(asctime)s %(name)s %(module)s %(process)d "
+                    r"%(levelname)-8s %(message)s"
                 ),
             },
         },
