@@ -122,7 +122,7 @@ python http_agent.py --help
 
 #### 额外头部
 
-请求加上`X-Proxy-Agent` 头部来避免递归请求。
+请求加上 `X-Proxy-Agent` 头部来避免递归请求。
 
 
 
@@ -135,4 +135,3 @@ python http_agent.py --help
 - Content-Length
 - Connection
 - Content-Encoding
-
