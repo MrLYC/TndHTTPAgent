@@ -201,23 +201,26 @@ class ProxyHandler(web.RequestHandler):
         self.id = id(self)
         self.request_data = None
 
-    def get_request_data(self):
+    def validate_request(self, request_data):
         if self.request.headers.get("X-Proxy-Agent") == X_Proxy_Agent:
             self.set_status(403, "recursion rejected")
-            return
+            return False
 
         try:
-            request_data = json.loads(self.request.body.decode("utf-8"))
             RequstDataValidator.validate(request_data)
-        except ValueError as err:
-            self.set_status(400, str(err))
-            return
         except ValidationError as err:
             self.set_status(400, "/%s: %s" % (
                 "::".join(err.path), err.message
             ))
+            return False
+        return True
+
+    def get_post_request_data(self):
+        try:
+            request_data = json.loads(self.request.body.decode("utf-8"))
+        except ValueError as err:
+            self.set_status(400, str(err))
             return
-        self.request_data = request_data
         return request_data
 
     def _set_proxy_headers(self):
@@ -335,14 +338,8 @@ class ProxyHandler(web.RequestHandler):
         headers["X-Proxy-Agent"] = X_Proxy_Agent
         return headers
 
-    @web.asynchronous
     @gen.coroutine
-    def post(self):
-        request_data = self.get_request_data()
-        logger.debug("[%s]agent request data: %s", self.id, request_data)
-        if not request_data:
-            raise gen.Return()
-
+    def handle_request(self, request_data):
         try:
             proxy_request = yield self._make_proxy_request(request_data)
             if not proxy_request:
@@ -354,6 +351,32 @@ class ProxyHandler(web.RequestHandler):
         except Exception as err:
             logger.exception(err)
         raise gen.Return()
+
+    @web.asynchronous
+    @gen.coroutine
+    def get(self):
+        url = self.get_query_argument("url")
+        logger.debug("[%s]agent get url: %s", self.id, url)
+
+        self.request_data = request_data = {"url": url}
+        if not self.validate_request(request_data):
+            raise gen.Return()
+
+        yield self.handle_request(request_data)
+
+    @web.asynchronous
+    @gen.coroutine
+    def post(self):
+        request_data = self.get_post_request_data()
+        logger.debug("[%s]agent request data: %s", self.id, request_data)
+        if not request_data:
+            raise gen.Return()
+
+        self.request_data = request_data
+        if not self.validate_request(request_data):
+            raise gen.Return()
+
+        yield self.handle_request(request_data)
 
     def prepare_curl_callback(self, curl):
         import pycurl
