@@ -357,8 +357,8 @@ class ProxyHandler(web.RequestHandler):
         import pycurl
 
         if (
-            "insecure_connection" in self.request_data
-            and bool(self.request_data.get("insecure_connection"))
+            "insecure_connection" in self.request_data and
+            bool(self.request_data.get("insecure_connection"))
         ):
             curl.setopt(pycurl.SSL_VERIFYHOST, 0)
 
@@ -437,6 +437,12 @@ class ProxyHandler(web.RequestHandler):
             self.id, response.code, response.reason,
         )
 
+
+class IndexHandler(web.RequestHandler):
+    def get(self):
+        self.write("ok")
+        self.finish()
+
 if __name__ == "__main__":
     define("port", 8080, int, help="port to listen")
     define("curl_httpclient", False, help="use curl httpclient")
@@ -480,6 +486,7 @@ if __name__ == "__main__":
         ))
 
     application = web.Application([
+        (r"/?", IndexHandler),
         (r"/request/?", ProxyHandler),
     ], debug=options.debug)
 
