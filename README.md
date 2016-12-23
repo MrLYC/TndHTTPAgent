@@ -26,16 +26,16 @@ curl -X POST -d '{"url": "http://www.timeapi.org/utc/now", "headers": {"User-Age
 
 可以得到类似输出：
 
-> HTTP/1.1 200 OK
-> X-Xss-Protection: 1; mode=block
-> Transfer-Encoding: chunked
-> Server: thin 1.5.0 codename Knife
-> Via: 1.1 vegur
-> Date: Mon, 05 Sep 2016 14:59:13 GMT
-> X-Frame-Options: sameorigin
-> Content-Type: text/html;charset=utf-8
->
-> 2016-09-05T15:59:13+01:00
+  > HTTP/1.1 200 OK
+  > X-Xss-Protection: 1; mode=block
+  > Transfer-Encoding: chunked
+  > Server: thin 1.5.0 codename Knife
+  > Via: 1.1 vegur
+  > Date: Mon, 05 Sep 2016 14:59:13 GMT
+  > X-Frame-Options: sameorigin
+  > Content-Type: text/html;charset=utf-8
+  >
+  > 2016-09-05T15:59:13+01:00
 
 
 
@@ -53,7 +53,7 @@ curl -X POST -d '{"url": "http://www.timeapi.org/utc/now", "headers": {"User-Age
 | ----------------- | --------------------- | ------------------------------------- |
 | --curl-httpclient | 使用 curl 库，需要安装 pycurl |                                       |
 | --debug           | 开启 debug 模式           |                                       |
-| --interface-roles | interface 规则配置        | ctcc: 202.96.128.86,cucc:210.21.4.130 |
+| --interface-roles | interface 规则配置        | ctcc:202.96.128.86,cucc:210.21.4.130  |
 | --logpath         | 日志目录                  | /var/log/http_agent.log               |
 | --port            | 监听端口                  | 8080                                  |
 
